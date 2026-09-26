@@ -1,19 +1,19 @@
 import random
 import streamlit as st
 
-st.set_page_config(page_title="Math Exercises - Grade 4", page_icon="📐", layout="centered")
+st.set_page_config(page_title="Exercícios - 4ª Classe", page_icon="📚", layout="centered")
 
 
-# ---------------- EXERCISE GENERATORS (Grade 4 level) ----------------
+# ---------------- MATH EXERCISE GENERATORS (Grade 4 level) ----------------
 
 def gen_round(dif):
-    # Numbers always have 3 or 4 digits, so rounding to hundreds/thousands makes sense
     n = random.randint(100, 9999)
     place = random.choice([10, 100, 1000])
     answer = int(round(n / place) * place)
     place_name = "ten" if place == 10 else "hundred" if place == 100 else "thousand"
     return {
         "type": "round",
+        "subject": "math",
         "text": f"Round {n} to the nearest {place_name}:",
         "answer": str(answer),
     }
@@ -27,6 +27,7 @@ def gen_expand(dif):
     parts = [d * (10 ** (length - i - 1)) for i, d in enumerate(digits) if d != 0]
     return {
         "type": "expand",
+        "subject": "math",
         "text": f'Write {n} in expanded form (use " + " between parts, e.g. 300 + 40 + 2):',
         "answer": " + ".join(str(p) for p in parts),
     }
@@ -34,26 +35,121 @@ def gen_expand(dif):
 
 def gen_mult(dif):
     a, b = random.randint(1, 9), random.randint(1, 9)
-    return {"type": "mult", "text": f"{a} × {b} =", "answer": str(a * b)}
+    return {"type": "mult", "subject": "math", "text": f"{a} × {b} =", "answer": str(a * b)}
 
 
 def gen_add(dif):
     a, b = random.randint(10, 99), random.randint(10, 99)
-    return {"type": "add", "text": f"{a} + {b} =", "answer": str(a + b)}
+    return {"type": "add", "subject": "math", "text": f"{a} + {b} =", "answer": str(a + b)}
 
 
 def gen_sub(dif):
     a = random.randint(10, 99)
     b = random.randint(10, a)
-    return {"type": "sub", "text": f"{a} − {b} =", "answer": str(a - b)}
+    return {"type": "sub", "subject": "math", "text": f"{a} − {b} =", "answer": str(a - b)}
 
 
-GENERATORS = {
+MATH_GENERATORS = {
     "round": ("Round numbers", gen_round),
     "expand": ("Expanded form", gen_expand),
     "mult": ("Multiplication", gen_mult),
     "add": ("Addition", gen_add),
     "sub": ("Subtraction", gen_sub),
+}
+
+
+# ---------------- ENGLISH EXERCISE GENERATORS (Grade 4 level) ----------------
+
+VOCAB = [
+    ("house", "casa"), ("dog", "cachorro"), ("cat", "gato"), ("book", "livro"),
+    ("water", "água"), ("friend", "amigo"), ("school", "escola"), ("teacher", "professor"),
+    ("family", "família"), ("table", "mesa"), ("chair", "cadeira"), ("window", "janela"),
+    ("sun", "sol"), ("moon", "lua"), ("mother", "mãe"), ("father", "pai"),
+    ("food", "comida"), ("tree", "árvore"), ("bird", "pássaro"), ("shoe", "sapato"),
+]
+
+OPPOSITES = [
+    ("big", "small"), ("hot", "cold"), ("happy", "sad"), ("fast", "slow"),
+    ("open", "closed"), ("day", "night"), ("up", "down"), ("old", "young"),
+    ("clean", "dirty"), ("easy", "difficult"),
+]
+
+PLURALS = [
+    ("cat", "cats"), ("dog", "dogs"), ("book", "books"), ("house", "houses"),
+    ("box", "boxes"), ("bus", "buses"), ("chair", "chairs"), ("apple", "apples"),
+    ("baby", "babies"), ("city", "cities"),
+]
+
+VERB_TO_BE = [
+    ("I _ a student.", "am"),
+    ("She _ my friend.", "is"),
+    ("They _ happy.", "are"),
+    ("We _ at school.", "are"),
+    ("He _ my brother.", "is"),
+    ("You _ very kind.", "are"),
+    ("It _ a nice day.", "is"),
+]
+
+
+def gen_translation(dif):
+    en, pt = random.choice(VOCAB)
+    if random.choice([True, False]):
+        return {
+            "type": "translation",
+            "subject": "english",
+            "text": f'Translate to Portuguese: "{en}"',
+            "answer": pt,
+        }
+    return {
+        "type": "translation",
+        "subject": "english",
+        "text": f'Translate to English: "{pt}"',
+        "answer": en,
+    }
+
+
+def gen_opposite(dif):
+    a, b = random.choice(OPPOSITES)
+    if random.choice([True, False]):
+        return {"type": "opposite", "subject": "english",
+                "text": f'What is the opposite of "{a}"?', "answer": b}
+    return {"type": "opposite", "subject": "english",
+            "text": f'What is the opposite of "{b}"?', "answer": a}
+
+
+def gen_plural(dif):
+    sing, plur = random.choice(PLURALS)
+    return {
+        "type": "plural",
+        "subject": "english",
+        "text": f'Write the plural of "{sing}":',
+        "answer": plur,
+    }
+
+
+def gen_verb_to_be(dif):
+    sentence, answer = random.choice(VERB_TO_BE)
+    return {
+        "type": "verb_to_be",
+        "subject": "english",
+        "text": f'Fill in the blank with am/is/are: "{sentence}"',
+        "answer": answer,
+    }
+
+
+ENGLISH_GENERATORS = {
+    "translation": ("Vocabulary translation", gen_translation),
+    "opposite": ("Opposites", gen_opposite),
+    "plural": ("Plurals", gen_plural),
+    "verb_to_be": ("Verb 'to be'", gen_verb_to_be),
+}
+
+
+SUBJECTS = {
+    "math": {"label": "🧮 Matemática", "generators": MATH_GENERATORS,
+              "default": ("round", "expand", "mult")},
+    "english": {"label": "📖 Inglês", "generators": ENGLISH_GENERATORS,
+                 "default": ("translation", "opposite", "plural")},
 }
 
 
@@ -77,20 +173,44 @@ def normalize_expanded(txt):
     return "+".join(str(n) for n in numbers)
 
 
+def check_answer(ex, val):
+    if ex["type"] == "expand":
+        return normalize_expanded(val) == normalize_expanded(ex["answer"])
+    if ex.get("subject") == "english":
+        return val.strip().lower() == ex["answer"].strip().lower()
+    return val.replace(" ", "") == ex["answer"].replace(" ", "")
+
+
 # ---------------- INTERFACE ----------------
 
-st.title("📐 Math Exercises - Grade 4")
+st.title("📚 English and Math")
 
 if "exercises" not in st.session_state:
     st.session_state.exercises = None
     st.session_state.checked = False
 
-if st.session_state.exercises is None:
-    st.subheader("Choose the exercise types")
+if "subject" not in st.session_state:
+    st.session_state.subject = "math"
 
+if st.session_state.exercises is None:
+    st.subheader("Escolha a matéria")
+
+    subject = st.radio(
+        "Subject",
+        options=list(SUBJECTS.keys()),
+        format_func=lambda k: SUBJECTS[k]["label"],
+        index=list(SUBJECTS.keys()).index(st.session_state.subject),
+        label_visibility="collapsed",
+        horizontal=True,
+    )
+    st.session_state.subject = subject
+    generators = SUBJECTS[subject]["generators"]
+    default_types = SUBJECTS[subject]["default"]
+
+    st.subheader("Escolha os tipos de exercício")
     chosen_types = []
-    for key, (label, _) in GENERATORS.items():
-        if st.checkbox(label, value=key in ("round", "expand", "mult"), key=f"chk_{key}"):
+    for key, (label, _) in generators.items():
+        if st.checkbox(label, value=key in default_types, key=f"chk_{subject}_{key}"):
             chosen_types.append(key)
 
     col1, col2 = st.columns(2)
@@ -107,7 +227,7 @@ if st.session_state.exercises is None:
             exercises = []
             for _ in range(qty):
                 t = random.choice(chosen_types)
-                exercises.append(GENERATORS[t][1](dif))
+                exercises.append(generators[t][1](dif))
             st.session_state.exercises = exercises
             st.session_state.checked = False
             st.rerun()
@@ -139,10 +259,7 @@ else:
         correct_count = 0
         for i, ex in enumerate(exercises):
             val = answers[i].strip()
-            if ex["type"] == "expand":
-                is_correct = normalize_expanded(val) == normalize_expanded(ex["answer"])
-            else:
-                is_correct = val.replace(" ", "") == ex["answer"].replace(" ", "")
+            is_correct = check_answer(ex, val)
 
             question_badge(i + 1, ex['text'])
             if is_correct:
@@ -162,7 +279,7 @@ else:
         if st.button("Unlock download"):
             codigos_validos = st.secrets.get("access_codes", [])
             if codigo in codigos_validos and codigo != "":
-                conteudo = f"Math Exercises - Grade 4\nScore: {correct_count}/{len(exercises)}\n\n"
+                conteudo = f"Exercícios - 4ª Classe\nScore: {correct_count}/{len(exercises)}\n\n"
                 for i, ex in enumerate(exercises):
                     conteudo += f"{i + 1} / {ex['text']}\n   Answer: {ex['answer']}\n\n"
                 st.session_state.download_liberado = conteudo
@@ -175,7 +292,7 @@ else:
             st.download_button(
                 "⬇️ Download worksheet (.txt)",
                 data=st.session_state.download_liberado,
-                file_name="math_worksheet.txt",
+                file_name="worksheet.txt",
                 mime="text/plain",
             )
 
