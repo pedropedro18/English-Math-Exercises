@@ -33,21 +33,17 @@ def gen_expand(dif):
 
 
 def gen_mult(dif):
-    max_a = {1: 5, 2: 10, 3: 12}[dif]
-    max_b = {1: 5, 2: 10, 3: 12}[dif]
-    a, b = random.randint(2, max_a), random.randint(2, max_b)
+    a, b = random.randint(1, 9), random.randint(1, 9)
     return {"type": "mult", "text": f"{a} × {b} =", "answer": str(a * b)}
 
 
 def gen_add(dif):
-    maximum = {1: 99, 2: 999, 3: 9999}[dif]
-    a, b = random.randint(10, maximum), random.randint(10, maximum)
+    a, b = random.randint(10, 99), random.randint(10, 99)
     return {"type": "add", "text": f"{a} + {b} =", "answer": str(a + b)}
 
 
 def gen_sub(dif):
-    maximum = {1: 99, 2: 999, 3: 9999}[dif]
-    a = random.randint(10, maximum)
+    a = random.randint(10, 99)
     b = random.randint(10, a)
     return {"type": "sub", "text": f"{a} − {b} =", "answer": str(a - b)}
 
