@@ -143,7 +143,7 @@ else:
 
         st.markdown("---")
         st.subheader("📄 Download worksheet")
-        st.caption("Free to practice online. Downloading the worksheet costs 5.000 Kz — enter your access code after payment.")
+        st.caption("Free to practice online. Downloading the worksheet costs 5.000 Kz — pay via Express to 923 030 010, then enter your access code.")
 
         codigo = st.text_input("Access code", type="password", key="codigo_acesso")
         if st.button("Unlock download"):
@@ -156,7 +156,7 @@ else:
                 st.success("Access granted! Click the button below to download.")
             else:
                 st.session_state.download_liberado = None
-                st.error("Invalid code. Pay 5.000 Kz and contact the teacher to receive your access code.")
+                st.error("Invalid code. Pay 5.000 Kz via Express to 923 030 010, then contact the teacher to receive your access code.")
 
         if st.session_state.get("download_liberado"):
             st.download_button(
