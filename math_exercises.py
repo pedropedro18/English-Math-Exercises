@@ -10,7 +10,7 @@ def gen_round(dif):
     # Numbers always have 3 or 4 digits, so rounding to hundreds/thousands makes sense
     n = random.randint(100, 9999)
     place = random.choice([10, 100, 1000])
-    answer = round(n / place) * place
+    answer = int(round(n / place) * place)
     place_name = "ten" if place == 10 else "hundred" if place == 100 else "thousand"
     return {
         "type": "round",
@@ -84,7 +84,7 @@ if st.session_state.exercises is None:
 
     col1, col2 = st.columns(2)
     with col1:
-        qty = st.selectbox("Number of questions", [5, 10, 15], index=1)
+        qty = st.selectbox("Number of questions", [1, 3, 5, 6], index=2)
     with col2:
         difficulty = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"], index=1)
     dif = {"Easy": 1, "Medium": 2, "Hard": 3}[difficulty]
