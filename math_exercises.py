@@ -141,7 +141,33 @@ else:
         st.markdown("---")
         st.markdown(f"## Score: {correct_count} / {len(exercises)}")
 
+        st.markdown("---")
+        st.subheader("📄 Download worksheet")
+        st.caption("Free to practice online. Downloading the worksheet costs 5.000 Kz — enter your access code after payment.")
+
+        codigo = st.text_input("Access code", type="password", key="codigo_acesso")
+        if st.button("Unlock download"):
+            codigos_validos = st.secrets.get("access_codes", [])
+            if codigo in codigos_validos and codigo != "":
+                conteudo = f"Math Exercises - Grade 4\nScore: {correct_count}/{len(exercises)}\n\n"
+                for i, ex in enumerate(exercises):
+                    conteudo += f"{i + 1}. {ex['text']}\n   Answer: {ex['answer']}\n\n"
+                st.session_state.download_liberado = conteudo
+                st.success("Access granted! Click the button below to download.")
+            else:
+                st.session_state.download_liberado = None
+                st.error("Invalid code. Pay 5.000 Kz and contact the teacher to receive your access code.")
+
+        if st.session_state.get("download_liberado"):
+            st.download_button(
+                "⬇️ Download worksheet (.txt)",
+                data=st.session_state.download_liberado,
+                file_name="math_worksheet.txt",
+                mime="text/plain",
+            )
+
         if st.button("Try again"):
             st.session_state.exercises = None
             st.session_state.checked = False
+            st.session_state.download_liberado = None
             st.rerun()
