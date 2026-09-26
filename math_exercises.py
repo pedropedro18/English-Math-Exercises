@@ -107,15 +107,21 @@ else:
     if not st.session_state.checked:
         answers = []
         for i, ex in enumerate(exercises):
-            st.markdown(f"*{i + 1}. {ex['text']}*")
+            st.markdown(f"*{i + 1} - {ex['text']}*")
             ans = st.text_input("Your answer", key=f"ans_{i}", label_visibility="collapsed")
             answers.append(ans)
             st.markdown("---")
 
-        if st.button("Check answers", type="primary"):
-            st.session_state.answers = answers
-            st.session_state.checked = True
-            st.rerun()
+        col_back, col_check = st.columns(2)
+        with col_back:
+            if st.button("⬅️ Back"):
+                st.session_state.exercises = None
+                st.rerun()
+        with col_check:
+            if st.button("Check answers", type="primary"):
+                st.session_state.answers = answers
+                st.session_state.checked = True
+                st.rerun()
 
     else:
         answers = st.session_state.answers
@@ -127,7 +133,7 @@ else:
             else:
                 is_correct = val.replace(" ", "") == ex["answer"].replace(" ", "")
 
-            st.markdown(f"*{i + 1}. {ex['text']}*")
+            st.markdown(f"*{i + 1} - {ex['text']}*")
             if is_correct:
                 correct_count += 1
                 st.success(f"✔️ Correct! ({val})")
@@ -147,7 +153,7 @@ else:
             if codigo in codigos_validos and codigo != "":
                 conteudo = f"Math Exercises - Grade 4\nScore: {correct_count}/{len(exercises)}\n\n"
                 for i, ex in enumerate(exercises):
-                    conteudo += f"{i + 1}. {ex['text']}\n   Answer: {ex['answer']}\n\n"
+                    conteudo += f"{i + 1} - {ex['text']}\n   Answer: {ex['answer']}\n\n"
                 st.session_state.download_liberado = conteudo
                 st.success("Access granted! Click the button below to download.")
             else:
