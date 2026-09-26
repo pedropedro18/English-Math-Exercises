@@ -57,6 +57,17 @@ GENERATORS = {
 }
 
 
+def question_badge(number, text):
+    st.markdown(
+        f"""<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+<span style="background:#4f46e5;color:#fff;border-radius:50%;min-width:28px;height:28px;
+display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">{number}</span>
+<span style="font-size:1.05rem;font-weight:600;">{text}</span>
+</div>""",
+        unsafe_allow_html=True,
+    )
+
+
 def normalize_expanded(txt):
     parts = [p.strip() for p in txt.split("+") if p.strip() != ""]
     try:
@@ -107,7 +118,7 @@ else:
     if not st.session_state.checked:
         answers = []
         for i, ex in enumerate(exercises):
-            st.markdown(f"*{i + 1} - {ex['text']}*")
+            question_badge(i + 1, ex['text'])
             ans = st.text_input("Your answer", key=f"ans_{i}", label_visibility="collapsed")
             answers.append(ans)
             st.markdown("---")
@@ -133,7 +144,7 @@ else:
             else:
                 is_correct = val.replace(" ", "") == ex["answer"].replace(" ", "")
 
-            st.markdown(f"*{i + 1} - {ex['text']}*")
+            question_badge(i + 1, ex['text'])
             if is_correct:
                 correct_count += 1
                 st.success(f"✔️ Correct! ({val})")
@@ -153,7 +164,7 @@ else:
             if codigo in codigos_validos and codigo != "":
                 conteudo = f"Math Exercises - Grade 4\nScore: {correct_count}/{len(exercises)}\n\n"
                 for i, ex in enumerate(exercises):
-                    conteudo += f"{i + 1} - {ex['text']}\n   Answer: {ex['answer']}\n\n"
+                    conteudo += f"{i + 1} / {ex['text']}\n   Answer: {ex['answer']}\n\n"
                 st.session_state.download_liberado = conteudo
                 st.success("Access granted! Click the button below to download.")
             else:
