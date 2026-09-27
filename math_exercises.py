@@ -12,6 +12,8 @@ EXPRESS_NUMBER = "923 030 010"
 WHATSAPP_NUMBER = "244923030010"  # international format, no + or spaces, for wa.me links
 PRICE_KZ = "5.000"
 RECOVERY_FILE = "recovery_data.json"
+UNLOCK_LOG_FILE = "unlock_log.json"
+MAX_UNLOCKS_PER_CODE = 2
 
 
 # =========================================================
@@ -450,8 +452,6 @@ def whatsapp_link(message):
 # =========================================================
 # RECOVERY DATA (code <-> personal secret phrase)
 # =========================================================
-# Lets a student recover access on their own if they lose the link/code,
-# using a personal secret phrase only they defined and know.
 
 def load_recovery_data():
     if not os.path.exists(RECOVERY_FILE):
@@ -476,7 +476,6 @@ def normalize_phrase(phrase):
 
 
 def register_recovery_phrase(code, phrase):
-    """Stores (or keeps existing) recovery phrase for a code."""
     if not phrase.strip():
         return
     data = load_recovery_data()
@@ -486,13 +485,65 @@ def register_recovery_phrase(code, phrase):
 
 
 def find_code_by_phrase(phrase):
-    """Returns the access code linked to a given secret phrase, or None."""
     data = load_recovery_data()
     target = normalize_phrase(phrase)
     for code, saved_phrase in data.items():
         if saved_phrase == target:
             return code
     return None
+
+
+# =========================================================
+# UNLOCK LIMIT (max N unlocks per code, to discourage sharing)
+# =========================================================
+
+def load_unlock_log():
+    if not os.path.exists(UNLOCK_LOG_FILE):
+        return {}
+    try:
+        with open(UNLOCK_LOG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_unlock_log(data):
+    try:
+        with open(UNLOCK_LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except OSError:
+        pass
+
+
+def count_unlocks(code):
+    log = load_unlock_log()
+    return len(log.get(code, []))
+
+
+def register_unlock(code):
+    """
+    Registers a new unlock event for this code, if under the limit.
+    Returns True if the unlock was allowed, False if limit was reached.
+    Each browser/session is only counted once per app run, tracked via
+    st.session_state, so re-running the same already-unlocked session
+    does not count as a new unlock.
+    """
+    session_flag = f"counted_{code}"
+    if st.session_state.get(session_flag):
+        return True  # already counted in this session, allow silently
+
+    import datetime
+    log = load_unlock_log()
+    entries = log.get(code, [])
+
+    if len(entries) >= MAX_UNLOCKS_PER_CODE:
+        return False
+
+    entries.append(datetime.datetime.now().isoformat(timespec="seconds"))
+    log[code] = entries
+    save_unlock_log(log)
+    st.session_state[session_flag] = True
+    return True
 
 
 # =========================================================
@@ -506,8 +557,12 @@ def check_permanent_unlock():
     query_code = st.query_params.get("code", "")
     valid_codes = st.secrets.get("access_codes", [])
 
-    if query_code and query_code in valid_codes:
-        st.session_state.unlocked = True
+    if query_code and query_code in valid_codes and not st.session_state.unlocked:
+        if register_unlock(query_code):
+            st.session_state.unlocked = True
+        else:
+            st.session_state.unlocked = False
+            st.session_state.limit_reached_code = query_code
 
 
 # ---------------- INTERFACE ----------------
@@ -515,6 +570,12 @@ def check_permanent_unlock():
 st.title("📚 English and Math")
 
 check_permanent_unlock()
+
+if st.session_state.get("limit_reached_code"):
+    st.error(
+        "⚠️ Este código já atingiu o limite de dispositivos permitidos. "
+        "Se achas que isto é um engano, contacta o professor."
+    )
 
 if "exercises" not in st.session_state:
     st.session_state.exercises = None
@@ -605,6 +666,9 @@ else:
 2. Send the payment confirmation to the teacher on WhatsApp.
 3. The teacher will reply with your personal access code.
 4. Enter that code below to unlock forever.
+
+⚠️ Cada código só pode ser usado em até {MAX_UNLOCKS_PER_CODE} dispositivos.
+Não partilhes o teu código com outras pessoas.
                         """
                     )
                     st.link_button(
@@ -627,20 +691,31 @@ else:
                     valid_codes = st.secrets.get("access_codes", [])
                     if codigo.strip() == "":
                         st.warning("Enter the access code your teacher sent you.")
-                    elif codigo.strip() in valid_codes:
-                        register_recovery_phrase(codigo.strip(), frase_secreta)
-                        st.session_state.unlocked = True
-                        st.query_params["code"] = codigo.strip()
-                        st.success(
-                            "✅ Unlocked! Save this page in your browser bookmarks/favorites "
-                            "so you never need to pay or enter the code again."
-                        )
-                        st.rerun()
-                    else:
+                    elif codigo.strip() not in valid_codes:
                         st.error(
                             "That code isn't recognized. Double-check it, or use the "
                             "instructions above to get a valid one from the teacher."
                         )
+                    else:
+                        clean_code = codigo.strip()
+                        already_unlocked_here = st.session_state.get(f"counted_{clean_code}")
+                        current_count = count_unlocks(clean_code)
+
+                        if not already_unlocked_here and current_count >= MAX_UNLOCKS_PER_CODE:
+                            st.error(
+                                "⚠️ Este código já atingiu o limite de dispositivos permitidos. "
+                                "Se achas que isto é um engano, contacta o professor."
+                            )
+                        else:
+                            register_recovery_phrase(clean_code, frase_secreta)
+                            register_unlock(clean_code)
+                            st.session_state.unlocked = True
+                            st.query_params["code"] = clean_code
+                            st.success(
+                                "✅ Unlocked! Save this page in your browser bookmarks/favorites "
+                                "so you never need to pay or enter the code again."
+                            )
+                            st.rerun()
 
             with tab_forgot:
                 st.markdown(
@@ -657,19 +732,29 @@ else:
                         st.warning("Escreve a frase-secreta que definiste da primeira vez.")
                     else:
                         found_code = find_code_by_phrase(frase_recuperar)
-                        if found_code:
-                            st.session_state.unlocked = True
-                            st.query_params["code"] = found_code
-                            st.success(
-                                "✅ Acesso recuperado! Guarda este link nos favoritos para "
-                                "não precisares de repetir isto."
-                            )
-                            st.rerun()
-                        else:
+                        if not found_code:
                             st.error(
                                 "Frase não reconhecida. Se nunca definiste uma, "
                                 "contacta o professor para receberes o teu código novamente."
                             )
+                        else:
+                            already_unlocked_here = st.session_state.get(f"counted_{found_code}")
+                            current_count = count_unlocks(found_code)
+
+                            if not already_unlocked_here and current_count >= MAX_UNLOCKS_PER_CODE:
+                                st.error(
+                                    "⚠️ Este código já atingiu o limite de dispositivos permitidos. "
+                                    "Se achas que isto é um engano, contacta o professor."
+                                )
+                            else:
+                                register_unlock(found_code)
+                                st.session_state.unlocked = True
+                                st.query_params["code"] = found_code
+                                st.success(
+                                    "✅ Acesso recuperado! Guarda este link nos favoritos para "
+                                    "não precisares de repetir isto."
+                                )
+                                st.rerun()
 
         else:
             # ---- UNLOCKED VIEW: show correct/incorrect ----

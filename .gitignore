@@ -4,3 +4,4 @@ _pycache_/
 used_codes.json
 .streamlit/secrets.toml
 recovery_data.json
+unlock_log.json
