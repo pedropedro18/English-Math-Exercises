@@ -1,4 +1,6 @@
 import random
+import json
+import os
 import streamlit as st
 
 st.set_page_config(page_title="English and Math - 4ª Classe", page_icon="📚", layout="centered")
@@ -9,6 +11,7 @@ st.set_page_config(page_title="English and Math - 4ª Classe", page_icon="📚",
 EXPRESS_NUMBER = "923 030 010"
 WHATSAPP_NUMBER = "244923030010"  # international format, no + or spaces, for wa.me links
 PRICE_KZ = "5.000"
+RECOVERY_FILE = "recovery_data.json"
 
 
 # =========================================================
@@ -445,15 +448,58 @@ def whatsapp_link(message):
 
 
 # =========================================================
+# RECOVERY DATA (code <-> personal secret phrase)
+# =========================================================
+# Lets a student recover access on their own if they lose the link/code,
+# using a personal secret phrase only they defined and know.
+
+def load_recovery_data():
+    if not os.path.exists(RECOVERY_FILE):
+        return {}
+    try:
+        with open(RECOVERY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_recovery_data(data):
+    try:
+        with open(RECOVERY_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except OSError:
+        pass
+
+
+def normalize_phrase(phrase):
+    return phrase.strip().lower()
+
+
+def register_recovery_phrase(code, phrase):
+    """Stores (or keeps existing) recovery phrase for a code."""
+    if not phrase.strip():
+        return
+    data = load_recovery_data()
+    if code not in data:
+        data[code] = normalize_phrase(phrase)
+        save_recovery_data(data)
+
+
+def find_code_by_phrase(phrase):
+    """Returns the access code linked to a given secret phrase, or None."""
+    data = load_recovery_data()
+    target = normalize_phrase(phrase)
+    for code, saved_phrase in data.items():
+        if saved_phrase == target:
+            return code
+    return None
+
+
+# =========================================================
 # PERMANENT UNLOCK (via link with ?code=... in the URL)
 # =========================================================
 
 def check_permanent_unlock():
-    """
-    Checks if a valid access code is present in the URL query params.
-    If so, marks the session as unlocked forever (as long as the
-    student keeps using the same link with ?code=...).
-    """
     if "unlocked" not in st.session_state:
         st.session_state.unlocked = False
 
@@ -549,42 +595,81 @@ else:
                 "(pagamento único, válido para sempre)."
             )
 
-            with st.expander("💳 Como obter o código de acesso", expanded=True):
-                st.markdown(
-                    f"""
+            tab_unlock, tab_forgot = st.tabs(["🔓 Tenho um código", "❓ Esqueci o meu código"])
+
+            with tab_unlock:
+                with st.expander("💳 Como obter o código de acesso", expanded=True):
+                    st.markdown(
+                        f"""
 1. Pay {PRICE_KZ} Kz via Express to {EXPRESS_NUMBER}.
 2. Send the payment confirmation to the teacher on WhatsApp.
 3. The teacher will reply with your personal access code.
 4. Enter that code below to unlock forever.
-                    """
-                )
-                st.link_button(
-                    "📲 Send payment confirmation on WhatsApp",
-                    whatsapp_link(
-                        f"Hi! I just paid {PRICE_KZ} Kz via Express to unlock the site. "
-                        "Here is my payment confirmation:"
-                    ),
+                        """
+                    )
+                    st.link_button(
+                        "📲 Send payment confirmation on WhatsApp",
+                        whatsapp_link(
+                            f"Hi! I just paid {PRICE_KZ} Kz via Express to unlock the site. "
+                            "Here is my payment confirmation:"
+                        ),
+                    )
+
+                codigo = st.text_input("Access code", type="password", key="codigo_acesso")
+                frase_secreta = st.text_input(
+                    "Define uma frase-secreta pessoal (só tu sabes) — usa-a se perderes o código",
+                    type="password",
+                    key="frase_secreta",
+                    help='Ex: "o nome do meu primeiro animal de estimação". Guarda isto de cabeça, não partilhes.',
                 )
 
-            codigo = st.text_input("Access code", type="password", key="codigo_acesso")
+                if st.button("Unlock forever", type="primary"):
+                    valid_codes = st.secrets.get("access_codes", [])
+                    if codigo.strip() == "":
+                        st.warning("Enter the access code your teacher sent you.")
+                    elif codigo.strip() in valid_codes:
+                        register_recovery_phrase(codigo.strip(), frase_secreta)
+                        st.session_state.unlocked = True
+                        st.query_params["code"] = codigo.strip()
+                        st.success(
+                            "✅ Unlocked! Save this page in your browser bookmarks/favorites "
+                            "so you never need to pay or enter the code again."
+                        )
+                        st.rerun()
+                    else:
+                        st.error(
+                            "That code isn't recognized. Double-check it, or use the "
+                            "instructions above to get a valid one from the teacher."
+                        )
 
-            if st.button("Unlock forever", type="primary"):
-                valid_codes = st.secrets.get("access_codes", [])
-                if codigo.strip() == "":
-                    st.warning("Enter the access code your teacher sent you.")
-                elif codigo.strip() in valid_codes:
-                    st.session_state.unlocked = True
-                    st.query_params["code"] = codigo.strip()
-                    st.success(
-                        "✅ Unlocked! Save this page in your browser bookmarks/favorites "
-                        "so you never need to pay or enter the code again."
-                    )
-                    st.rerun()
-                else:
-                    st.error(
-                        "That code isn't recognized. Double-check it, or use the "
-                        "instructions above to get a valid one from the teacher."
-                    )
+            with tab_forgot:
+                st.markdown(
+                    "Se já desbloqueaste antes e definiste uma frase-secreta pessoal, "
+                    "escreve-a aqui para recuperares o acesso sem precisares de contactar o professor."
+                )
+                frase_recuperar = st.text_input(
+                    "A tua frase-secreta pessoal",
+                    type="password",
+                    key="frase_recuperar",
+                )
+                if st.button("Recuperar acesso"):
+                    if frase_recuperar.strip() == "":
+                        st.warning("Escreve a frase-secreta que definiste da primeira vez.")
+                    else:
+                        found_code = find_code_by_phrase(frase_recuperar)
+                        if found_code:
+                            st.session_state.unlocked = True
+                            st.query_params["code"] = found_code
+                            st.success(
+                                "✅ Acesso recuperado! Guarda este link nos favoritos para "
+                                "não precisares de repetir isto."
+                            )
+                            st.rerun()
+                        else:
+                            st.error(
+                                "Frase não reconhecida. Se nunca definiste uma, "
+                                "contacta o professor para receberes o teu código novamente."
+                            )
 
         else:
             # ---- UNLOCKED VIEW: show correct/incorrect ----

@@ -3,3 +3,4 @@ _pycache_/
 *.pyc
 used_codes.json
 .streamlit/secrets.toml
+recovery_data.json
