@@ -1,6 +1,4 @@
 import random
-import json
-import os
 import streamlit as st
 
 st.set_page_config(page_title="English and Math - 4ª Classe", page_icon="📚", layout="centered")
@@ -11,14 +9,10 @@ st.set_page_config(page_title="English and Math - 4ª Classe", page_icon="📚",
 EXPRESS_NUMBER = "923 030 010"
 WHATSAPP_NUMBER = "244923030010"  # international format, no + or spaces, for wa.me links
 PRICE_KZ = "5.000"
-USED_CODES_FILE = "used_codes.json"
 
 
 # =========================================================
 # MATH EXERCISE GENERATORS (Grade 4 level)
-# Each generator receives a "used" set and must return None
-# if it can't produce a fresh (non-repeated) exercise, so the
-# caller can try again / pick another type.
 # =========================================================
 
 def gen_round(dif, used):
@@ -445,61 +439,36 @@ def build_exercises(generators, chosen_types, qty, dif):
     return exercises
 
 
-# =========================================================
-# ACCESS CODE STORE (single-use codes, persisted to disk)
-# =========================================================
-# st.secrets is read-only at runtime, so we can't "consume" a code
-# there. Instead we keep a small JSON file next to the app that
-# records which codes have already been redeemed. This keeps codes
-# single-use even if a student shares theirs with a classmate.
-
-def load_used_codes():
-    if not os.path.exists(USED_CODES_FILE):
-        return {}
-    try:
-        with open(USED_CODES_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return {}
-
-
-def save_used_codes(data):
-    try:
-        with open(USED_CODES_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except OSError:
-        pass  # non-fatal: worst case a code can be reused this session
-
-
-def redeem_code(code):
-    """
-    Returns ('ok', None) if the code is valid and not yet used,
-    ('used', when) if it was already redeemed,
-    ('invalid', None) if the code doesn't exist at all.
-    Marks the code as used on success.
-    """
-    valid_codes = st.secrets.get("access_codes", [])
-    if code not in valid_codes or code == "":
-        return "invalid", None
-
-    used_codes = load_used_codes()
-    if code in used_codes:
-        return "used", used_codes[code]
-
-    import datetime
-    used_codes[code] = datetime.datetime.now().isoformat(timespec="seconds")
-    save_used_codes(used_codes)
-    return "ok", None
-
-
 def whatsapp_link(message):
     import urllib.parse
     return f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
 
 
+# =========================================================
+# PERMANENT UNLOCK (via link with ?code=... in the URL)
+# =========================================================
+
+def check_permanent_unlock():
+    """
+    Checks if a valid access code is present in the URL query params.
+    If so, marks the session as unlocked forever (as long as the
+    student keeps using the same link with ?code=...).
+    """
+    if "unlocked" not in st.session_state:
+        st.session_state.unlocked = False
+
+    query_code = st.query_params.get("code", "")
+    valid_codes = st.secrets.get("access_codes", [])
+
+    if query_code and query_code in valid_codes:
+        st.session_state.unlocked = True
+
+
 # ---------------- INTERFACE ----------------
 
 st.title("📚 English and Math")
+
+check_permanent_unlock()
 
 if "exercises" not in st.session_state:
     st.session_state.exercises = None
@@ -572,83 +541,70 @@ else:
 
     else:
         answers = st.session_state.answers
-        correct_count = 0
-        for i, ex in enumerate(exercises):
-            val = answers[i].strip()
-            is_correct = check_answer(ex, val)
 
-            question_badge(i + 1, ex['text'])
-            if is_correct:
-                correct_count += 1
-                st.success(f"✔️ Correct! ({val})")
-            else:
-                st.error(f"✘ Incorrect. Your answer: '{val}' — Correct answer: {ex['answer']}")
+        if not st.session_state.unlocked:
+            # ---- LOCKED VIEW: no correct/incorrect shown ----
+            st.warning(
+                "As respostas certas/erradas ficam escondidas até desbloqueares o acesso "
+                "(pagamento único, válido para sempre)."
+            )
 
-        st.markdown("---")
-        st.markdown(f"## Score: {correct_count} / {len(exercises)}")
-
-        st.markdown("---")
-        st.subheader("📄 Download worksheet")
-        st.caption(
-            "Practicing online is free. Downloading this worksheet (with answers) "
-            f"costs {PRICE_KZ} Kz."
-        )
-
-        # Step 1: payment instructions + WhatsApp contact, shown up front
-        with st.expander("💳 How to get your access code", expanded=not st.session_state.get("has_code_hint", False)):
-            st.markdown(
-                f"""
-1. Pay *{PRICE_KZ} Kz* via Express to *{EXPRESS_NUMBER}*.
+            with st.expander("💳 Como obter o código de acesso", expanded=True):
+                st.markdown(
+                    f"""
+1. Pay {PRICE_KZ} Kz via Express to {EXPRESS_NUMBER}.
 2. Send the payment confirmation to the teacher on WhatsApp.
 3. The teacher will reply with your personal access code.
-4. Enter that code below to unlock the download.
-                """
-            )
-            st.link_button(
-                "📲 Send payment confirmation on WhatsApp",
-                whatsapp_link(
-                    f"Hi! I just paid {PRICE_KZ} Kz via Express for the worksheet. "
-                    "Here is my payment confirmation:"
-                ),
-            )
+4. Enter that code below to unlock forever.
+                    """
+                )
+                st.link_button(
+                    "📲 Send payment confirmation on WhatsApp",
+                    whatsapp_link(
+                        f"Hi! I just paid {PRICE_KZ} Kz via Express to unlock the site. "
+                        "Here is my payment confirmation:"
+                    ),
+                )
 
-        codigo = st.text_input("Access code", type="password", key="codigo_acesso")
+            codigo = st.text_input("Access code", type="password", key="codigo_acesso")
 
-        if st.button("Unlock download"):
-            if codigo.strip() == "":
-                st.warning("Enter the access code your teacher sent you, or see the instructions above to get one.")
-            else:
-                status, used_when = redeem_code(codigo.strip())
-                if status == "ok":
-                    conteudo = f"English and Math Exercises\nScore: {correct_count}/{len(exercises)}\n\n"
-                    for i, ex in enumerate(exercises):
-                        conteudo += f"{i + 1} / {ex['text']}\n   Answer: {ex['answer']}\n\n"
-                    st.session_state.download_liberado = conteudo
-                    st.session_state.has_code_hint = True
-                    st.success("Access granted! Click the button below to download.")
-                elif status == "used":
-                    st.session_state.download_liberado = None
-                    st.error(
-                        f"This code was already used on {used_when}. "
-                        "Codes are single-use — contact the teacher if you think this is a mistake."
+            if st.button("Unlock forever", type="primary"):
+                valid_codes = st.secrets.get("access_codes", [])
+                if codigo.strip() == "":
+                    st.warning("Enter the access code your teacher sent you.")
+                elif codigo.strip() in valid_codes:
+                    st.session_state.unlocked = True
+                    st.query_params["code"] = codigo.strip()
+                    st.success(
+                        "✅ Unlocked! Save this page in your browser bookmarks/favorites "
+                        "so you never need to pay or enter the code again."
                     )
+                    st.rerun()
                 else:
-                    st.session_state.download_liberado = None
                     st.error(
                         "That code isn't recognized. Double-check it, or use the "
                         "instructions above to get a valid one from the teacher."
                     )
 
-        if st.session_state.get("download_liberado"):
-            st.download_button(
-                "⬇️ Download worksheet (.txt)",
-                data=st.session_state.download_liberado,
-                file_name="worksheet.txt",
-                mime="text/plain",
-            )
+        else:
+            # ---- UNLOCKED VIEW: show correct/incorrect ----
+            correct_count = 0
+            for i, ex in enumerate(exercises):
+                val = answers[i].strip()
+                is_correct = check_answer(ex, val)
 
+                question_badge(i + 1, ex['text'])
+                if is_correct:
+                    correct_count += 1
+                    st.success(f"✔️ Correct! ({val})")
+                else:
+                    st.error(f"✘ Incorrect. Your answer: '{val}' — Correct answer: {ex['answer']}")
+
+            st.markdown("---")
+            st.markdown(f"## Score: {correct_count} / {len(exercises)}")
+
+        st.markdown("---")
         if st.button("Try again"):
             st.session_state.exercises = None
             st.session_state.checked = False
-            st.session_state.download_liberado = None
             st.rerun()
