@@ -449,6 +449,26 @@ def whatsapp_link(message):
     return f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(message)}"
 
 
+def show_privacy_notice():
+    st.info(
+        """
+🔒 *Política de Privacidade e Uso*
+
+*Sobre o teu acesso*
+- Este código é *pessoal e intransmissível* — foi comprado por ti para uso individual.
+- *Não partilhes, vendas nem copies* o código ou o link de acesso com outras pessoas.
+
+*Sobre os teus dados*
+- Guardamos apenas: o código de acesso, a data/hora de desbloqueio (para segurança) e, se definires, a tua *frase-secreta pessoal* (usada só para recuperares o acesso).
+- *Não vendemos nem partilhamos* estes dados com terceiros, nem os usamos para qualquer outro fim.
+- Podes pedir ao professor, a qualquer momento, para apagar os teus dados.
+
+*Em caso de incumprimento*
+- Partilhar, vender ou copiar o código/link pode levar ao *bloqueio permanente* do acesso.
+        """
+    )
+
+
 # =========================================================
 # RECOVERY DATA (code <-> personal secret phrase)
 # =========================================================
@@ -684,6 +704,7 @@ else:
                             "✅ Unlocked! Save this page in your browser bookmarks/favorites "
                             "so you never need to pay or enter the code again."
                         )
+                        show_privacy_notice()
                         st.rerun()
 
             with tab_forgot:
@@ -714,10 +735,14 @@ else:
                                 "✅ Acesso recuperado! Guarda este link nos favoritos para "
                                 "não precisares de repetir isto."
                             )
+                            show_privacy_notice()
                             st.rerun()
 
         else:
             # ---- UNLOCKED VIEW: show correct/incorrect ----
+            with st.expander("🔒 Política de Privacidade e Uso"):
+                show_privacy_notice()
+
             correct_count = 0
             for i, ex in enumerate(exercises):
                 val = answers[i].strip()
