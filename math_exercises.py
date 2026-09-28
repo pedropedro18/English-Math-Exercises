@@ -530,6 +530,62 @@ PT_POSSESSIVES = [
     ("Este carro é do Pedro. É o carro _. (meu/teu/dele)", "dele"),
 ]
 
+# Reading and interpretation: each passage has questions
+# (question, correct option, [wrong option, wrong option])
+PT_READINGS = [
+    {
+        "id": "ana_cao",
+        "title": "A Ana e o seu cão",
+        "text": (
+            "A Ana vive em Luanda com a mãe e o irmão Paulo. Todas as manhãs, leva o seu "
+            "cão, o Bolinhas, a passear no quintal. Um dia, o Bolinhas encontrou uma bola "
+            "azul debaixo da mangueira. A Ana ficou muito feliz e brincou com ele até ao "
+            "meio-dia. À tarde, choveu muito e ficaram em casa a ver a chuva pela janela."
+        ),
+        "questions": [
+            ("Onde vive a Ana?", "Em Luanda", ["Em Benguela", "No Huambo"]),
+            ("Como se chama o cão da Ana?", "Bolinhas", ["Rex", "Tobi"]),
+            ("Onde o cão encontrou a bola?", "Debaixo da mangueira", ["Dentro de casa", "Na escola"]),
+            ("Porque ficaram em casa à tarde?", "Porque choveu muito", ["Porque estavam cansados", "Porque a Ana estava doente"]),
+            ("Qual é o melhor título para este texto?", "Um dia de brincadeira", ["Uma viagem ao mar", "A aula de Matemática"]),
+        ],
+    },
+    {
+        "id": "feira",
+        "title": "A feira do bairro",
+        "text": (
+            "Ao sábado, o senhor Manuel vai à feira do bairro com a filha Rita. Compram "
+            "tomates, cebolas e peixe fresco. A Rita ajuda a carregar o saco mais leve. No "
+            "fim, o pai compra-lhe uma laranja doce como prémio pela ajuda. A Rita agradece "
+            "com um sorriso e diz: \"Obrigada, pai!\""
+        ),
+        "questions": [
+            ("Quando vão à feira?", "Ao sábado", ["Ao domingo", "À sexta-feira"]),
+            ("O que compram na feira?", "Tomates, cebolas e peixe", ["Sapatos e livros", "Pão e leite"]),
+            ("Que saco carrega a Rita?", "O mais leve", ["O mais pesado", "Nenhum"]),
+            ("Porque é que o pai compra uma laranja à Rita?", "Como prémio pela ajuda", ["Porque ela chorou", "Porque a laranja estava barata"]),
+            ("O que quer dizer a palavra \"prémio\"?", "Algo que se dá a quem fez uma coisa boa", ["Um castigo", "Um tipo de fruta"]),
+        ],
+    },
+    {
+        "id": "baoba",
+        "title": "O embondeiro",
+        "text": (
+            "O embondeiro, ou baobá, é uma árvore muito grande e muito antiga que existe em "
+            "Angola. O seu tronco é tão grosso que são precisas muitas pessoas para o "
+            "abraçar. Os frutos chamam-se múcuas e servem para fazer sumo. Na estação seca, "
+            "a árvore guarda água no tronco. Por isso, dizem que o embondeiro é uma árvore sábia."
+        ),
+        "questions": [
+            ("Como é o tronco do embondeiro?", "Muito grosso", ["Muito fino", "Muito curto"]),
+            ("Para que servem as múcuas?", "Para fazer sumo", ["Para fazer roupa", "Para construir casas"]),
+            ("Onde é que a árvore guarda água?", "No tronco", ["Nas folhas", "Nas flores"]),
+            ("Porque dizem que o embondeiro é \"sábio\"?", "Porque sabe guardar água para a estação seca", ["Porque sabe ler", "Porque cresce muito depressa"]),
+            ("Qual é o melhor título para este texto?", "A árvore gigante de Angola", ["O rio de Luanda", "A festa da escola"]),
+        ],
+    },
+]
+
 
 def gen_pt_plural(dif, used):
     for _ in range(30):
@@ -643,6 +699,38 @@ def gen_pt_verb_ser(dif, used):
     return None
 
 
+def gen_pt_reading(dif, used):
+    """Uma pergunta de interpretação. Tenta manter o mesmo texto na mesma sessão."""
+    current = next((k[1] for k in used if k[0] == "pt_reading_current"), None)
+    others = [p for p in PT_READINGS if p["id"] != current]
+    random.shuffle(others)
+    order = [p for p in PT_READINGS if p["id"] == current] + others
+
+    for p in order:
+        free = [i for i in range(len(p["questions"])) if ("pt_reading", p["id"], i) not in used]
+        if not free:
+            continue
+        i = random.choice(free)
+        used.add(("pt_reading", p["id"], i))
+        for k in [k for k in used if k[0] == "pt_reading_current"]:
+            used.discard(k)
+        used.add(("pt_reading_current", p["id"]))
+
+        question, correct, wrongs = p["questions"][i]
+        options = [correct] + list(wrongs)
+        random.shuffle(options)
+        letters = ["A", "B", "C"]
+        answer = letters[options.index(correct)]
+        opts_html = "<br>".join(f"{l}) {o}" for l, o in zip(letters, options))
+        return {
+            "type": "pt_reading", "subject": "portuguese",
+            "passage_id": p["id"], "passage_title": p["title"], "passage": p["text"],
+            "text": f"{question}<br>{opts_html}<br><i>(responde só com a letra: A, B ou C)</i>",
+            "answer": answer,
+        }
+    return None
+
+
 PORTUGUESE_GENERATORS = {
     "pt_plural": ("Plural das palavras", gen_pt_plural),
     "pt_singular": ("Singular das palavras", gen_pt_singular),
@@ -652,6 +740,7 @@ PORTUGUESE_GENERATORS = {
     "pt_pronoun": ("Pronomes pessoais (eu, tu, ele...)", gen_pt_pronoun),
     "pt_possessive": ("Pronomes possessivos (meu, teu...)", gen_pt_possessive),
     "pt_verb_ser": ("Verbo SER", gen_pt_verb_ser),
+    "pt_reading": ("Leitura e interpretação", gen_pt_reading),
 }
 
 
@@ -879,7 +968,7 @@ SUBJECTS = {
     "english": {"label": "📖 Inglês", "generators": ENGLISH_GENERATORS,
                  "default": ("translation", "opposite", "plural", "verb_to_be", "en_pronoun")},
     "portuguese": {"label": "📕 Português", "generators": PORTUGUESE_GENERATORS,
-                   "default": ("pt_plural", "pt_opposite", "pt_feminine", "pt_pronoun")},
+                   "default": ("pt_plural", "pt_opposite", "pt_feminine", "pt_pronoun", "pt_reading")},
     "french": {"label": "🇫🇷 Francês", "generators": FRENCH_GENERATORS,
                "default": ("fr_translation", "fr_greeting", "fr_color", "fr_pronoun")},
 }
@@ -894,6 +983,19 @@ display:flex;align-items:center;justify-content:center;font-weight:700;flex-shri
 </div>""",
         unsafe_allow_html=True,
     )
+
+
+def show_passage(ex, last_pid):
+    """Mostra o texto de leitura só quando muda. Devolve o id do texto atual."""
+    pid = ex.get("passage_id")
+    if pid and pid != last_pid:
+        st.markdown(
+            f"""<div style="background:#f5f3ff;border-left:5px solid #4f46e5;border-radius:8px;
+padding:12px 16px;margin:8px 0 14px 0;color:#1f2937;">
+<b>📖 Lê o texto com atenção: {ex['passage_title']}</b><br><br>{ex['passage']}</div>""",
+            unsafe_allow_html=True,
+        )
+    return pid or last_pid
 
 
 def normalize_expanded(txt):
@@ -913,6 +1015,19 @@ def check_answer(ex, val):
     if ex.get("subject") in ("english", "portuguese"):
         return val.strip().lower() == ex["answer"].strip().lower()
     return val.replace(" ", "") == ex["answer"].replace(" ", "")
+
+
+def group_reading(exercises):
+    """Mantém as perguntas do mesmo texto de leitura juntas."""
+    result, placed = [], set()
+    for ex in exercises:
+        pid = ex.get("passage_id")
+        if pid is None:
+            result.append(ex)
+        elif pid not in placed:
+            placed.add(pid)
+            result.extend(e for e in exercises if e.get("passage_id") == pid)
+    return result
 
 
 def build_exercises(generators, chosen_types, qty, dif):
@@ -936,7 +1051,7 @@ def build_exercises(generators, chosen_types, qty, dif):
         seen_texts.add(ex["text"])
         exercises.append(ex)
 
-    return exercises
+    return group_reading(exercises)
 
 
 def whatsapp_link(message):
@@ -1125,7 +1240,9 @@ else:
 
     if not st.session_state.checked:
         answers = []
+        last_pid = None
         for i, ex in enumerate(exercises):
+            last_pid = show_passage(ex, last_pid)
             question_badge(i + 1, ex['text'])
             ans = st.text_input("Your answer", key=f"ans_{i}", label_visibility="collapsed")
             answers.append(ans)
@@ -1239,7 +1356,9 @@ else:
                 show_privacy_notice()
 
             correct_count = 0
+            last_pid = None
             for i, ex in enumerate(exercises):
+                last_pid = show_passage(ex, last_pid)
                 val = answers[i].strip()
                 is_correct = check_answer(ex, val)
 
