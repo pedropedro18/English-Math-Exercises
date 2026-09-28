@@ -3,7 +3,7 @@ import json
 import os
 import streamlit as st
 
-st.set_page_config(page_title="English, Math and Português - 4ª Classe", page_icon="📚", layout="centered")
+st.set_page_config(page_title="English, Math, Português and Français - 4ª Classe", page_icon="📚", layout="centered")
 
 # ---------------------------------------------------------
 # CONFIG: change these to your real numbers
@@ -655,6 +655,224 @@ PORTUGUESE_GENERATORS = {
 }
 
 
+# =========================================================
+# FRENCH EXERCISE GENERATORS (Francês - iniciação, 4ª Classe)
+# =========================================================
+
+import unicodedata
+
+
+def strip_accents(txt):
+    """Remove accents so children typing without accents are not penalised."""
+    nfkd = unicodedata.normalize("NFD", txt)
+    return "".join(c for c in nfkd if unicodedata.category(c) != "Mn")
+
+
+FR_VOCAB = [
+    ("casa", "maison"), ("cão", "chien"), ("gato", "chat"), ("livro", "livre"),
+    ("água", "eau"), ("amigo", "ami"), ("escola", "école"), ("professor", "professeur"),
+    ("família", "famille"), ("mesa", "table"), ("cadeira", "chaise"), ("janela", "fenêtre"),
+    ("sol", "soleil"), ("lua", "lune"), ("mãe", "mère"), ("pai", "père"),
+    ("pão", "pain"), ("leite", "lait"), ("maçã", "pomme"), ("árvore", "arbre"),
+    ("rio", "rivière"), ("cidade", "ville"), ("rua", "rue"), ("mão", "main"),
+]
+
+FR_GREETINGS = [
+    ("Bom dia", "bonjour"), ("Boa noite", "bonne nuit"), ("Obrigado", "merci"),
+    ("Adeus", "au revoir"), ("Olá (informal)", "salut"), ("Sim", "oui"),
+    ("Não", "non"), ("Desculpa", "pardon"),
+]
+
+FR_COLORS = [
+    ("vermelho", "rouge"), ("azul", "bleu"), ("verde", "vert"), ("amarelo", "jaune"),
+    ("preto", "noir"), ("branco", "blanc"), ("laranja", "orange"), ("roxo", "violet"),
+    ("rosa", "rose"), ("castanho", "marron"),
+]
+
+FR_NUMBERS = [
+    (1, "un"), (2, "deux"), (3, "trois"), (4, "quatre"), (5, "cinq"),
+    (6, "six"), (7, "sept"), (8, "huit"), (9, "neuf"), (10, "dix"),
+    (11, "onze"), (12, "douze"), (15, "quinze"), (20, "vingt"),
+]
+
+FR_DAYS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+
+FR_ARTICLES = [
+    ("maison", "une"), ("livre", "un"), ("table", "une"), ("chat", "un"),
+    ("école", "une"), ("chaise", "une"), ("ami", "un"), ("fenêtre", "une"),
+    ("chien", "un"), ("pomme", "une"), ("stylo", "un"), ("porte", "une"),
+]
+
+FR_PRONOUNS = [
+    ("Marie chante.", "elle"),
+    ("Paul court.", "il"),
+    ("Les garçons jouent.", "ils"),
+    ("Les filles dansent.", "elles"),
+    ("Pierre et moi mangeons.", "nous"),
+    ("Ma mère cuisine.", "elle"),
+    ("Mon père travaille.", "il"),
+    ("Anne et Sophie chantent.", "elles"),
+    ("Paul et Marc jouent.", "ils"),
+    ("Le chat dort.", "il"),
+]
+
+FR_ETRE = [
+    ("Je _ élève.", "suis"),
+    ("Tu _ mon ami.", "es"),
+    ("Il _ professeur.", "est"),
+    ("Elle _ gentille.", "est"),
+    ("Nous _ frères.", "sommes"),
+    ("Vous _ contents.", "êtes"),
+    ("Ils _ à l'école.", "sont"),
+    ("Elles _ grandes.", "sont"),
+]
+
+FR_AVOIR = [
+    ("J'_ un chat.", "ai"),
+    ("Tu _ un livre.", "as"),
+    ("Il _ une sœur.", "a"),
+    ("Nous _ deux chiens.", "avons"),
+    ("Vous _ un stylo.", "avez"),
+    ("Ils _ une maison.", "ont"),
+]
+
+
+def gen_fr_translation(dif, used):
+    for _ in range(30):
+        pt, fr = random.choice(FR_VOCAB)
+        direction = random.choice(["to_fr", "to_pt"])
+        key = ("fr_translation", pt, direction)
+        if key in used:
+            continue
+        used.add(key)
+        if direction == "to_fr":
+            return {"type": "fr_translation", "subject": "french",
+                    "text": f'Traduz para francês: "{pt}"', "answer": fr}
+        return {"type": "fr_translation", "subject": "french",
+                "text": f'Traduz para português: "{fr}"', "answer": pt}
+    return None
+
+
+def gen_fr_greeting(dif, used):
+    for _ in range(30):
+        pt, fr = random.choice(FR_GREETINGS)
+        if ("fr_greeting", pt) in used:
+            continue
+        used.add(("fr_greeting", pt))
+        return {"type": "fr_greeting", "subject": "french",
+                "text": f'Como se diz "{pt}" em francês?', "answer": fr}
+    return None
+
+
+def gen_fr_color(dif, used):
+    for _ in range(30):
+        pt, fr = random.choice(FR_COLORS)
+        direction = random.choice(["to_fr", "to_pt"])
+        key = ("fr_color", pt, direction)
+        if key in used:
+            continue
+        used.add(key)
+        if direction == "to_fr":
+            return {"type": "fr_color", "subject": "french",
+                    "text": f'Como se diz a cor "{pt}" em francês?', "answer": fr}
+        return {"type": "fr_color", "subject": "french",
+                "text": f'Que cor é "{fr}" em português?', "answer": pt}
+    return None
+
+
+def gen_fr_number(dif, used):
+    for _ in range(30):
+        n, word = random.choice(FR_NUMBERS)
+        direction = random.choice(["to_word", "to_digit"])
+        key = ("fr_number", n, direction)
+        if key in used:
+            continue
+        used.add(key)
+        if direction == "to_word":
+            return {"type": "fr_number", "subject": "french",
+                    "text": f'Escreve o número {n} em francês:', "answer": word}
+        return {"type": "fr_number", "subject": "french",
+                "text": f'Escreve o algarismo de "{word}":', "answer": str(n)}
+    return None
+
+
+def gen_fr_days(dif, used):
+    for _ in range(30):
+        idx = random.randint(0, 6)
+        mode = random.choice(["next", "previous"])
+        key = ("fr_days", idx, mode)
+        if key in used:
+            continue
+        used.add(key)
+        day = FR_DAYS[idx]
+        if mode == "next":
+            return {"type": "fr_days", "subject": "french",
+                    "text": f'Qual é o dia depois de "{day}"? (em francês)',
+                    "answer": FR_DAYS[(idx + 1) % 7]}
+        return {"type": "fr_days", "subject": "french",
+                "text": f'Qual é o dia antes de "{day}"? (em francês)',
+                "answer": FR_DAYS[(idx - 1) % 7]}
+    return None
+
+
+def gen_fr_article(dif, used):
+    for _ in range(30):
+        word, art = random.choice(FR_ARTICLES)
+        if ("fr_article", word) in used:
+            continue
+        used.add(("fr_article", word))
+        return {"type": "fr_article", "subject": "french",
+                "text": f'Escolhe "un" ou "une": _ {word}', "answer": art}
+    return None
+
+
+def gen_fr_pronoun(dif, used):
+    for _ in range(30):
+        sentence, answer = random.choice(FR_PRONOUNS)
+        if ("fr_pronoun", sentence) in used:
+            continue
+        used.add(("fr_pronoun", sentence))
+        return {"type": "fr_pronoun", "subject": "french",
+                "text": f'Escreve o pronome (je, tu, il, elle, nous, vous, ils, elles) que substitui o sujeito: "{sentence}"',
+                "answer": answer}
+    return None
+
+
+def gen_fr_etre(dif, used):
+    for _ in range(30):
+        sentence, answer = random.choice(FR_ETRE)
+        if ("fr_etre", sentence) in used:
+            continue
+        used.add(("fr_etre", sentence))
+        return {"type": "fr_etre", "subject": "french",
+                "text": f'Completa com o verbo ÊTRE (ser): "{sentence}"', "answer": answer}
+    return None
+
+
+def gen_fr_avoir(dif, used):
+    for _ in range(30):
+        sentence, answer = random.choice(FR_AVOIR)
+        if ("fr_avoir", sentence) in used:
+            continue
+        used.add(("fr_avoir", sentence))
+        return {"type": "fr_avoir", "subject": "french",
+                "text": f'Completa com o verbo AVOIR (ter): "{sentence}"', "answer": answer}
+    return None
+
+
+FRENCH_GENERATORS = {
+    "fr_translation": ("Vocabulário (PT ↔️ FR)", gen_fr_translation),
+    "fr_greeting": ("Cumprimentos e palavras úteis", gen_fr_greeting),
+    "fr_color": ("Cores", gen_fr_color),
+    "fr_number": ("Números", gen_fr_number),
+    "fr_days": ("Dias da semana", gen_fr_days),
+    "fr_article": ("Artigos (un / une)", gen_fr_article),
+    "fr_pronoun": ("Pronomes (je, tu, il, elle...)", gen_fr_pronoun),
+    "fr_etre": ("Verbo ÊTRE", gen_fr_etre),
+    "fr_avoir": ("Verbo AVOIR", gen_fr_avoir),
+}
+
+
 SUBJECTS = {
     "math": {"label": "🧮 Matemática", "generators": MATH_GENERATORS,
               "default": ("round", "expand", "mult", "add")},
@@ -662,6 +880,8 @@ SUBJECTS = {
                  "default": ("translation", "opposite", "plural", "verb_to_be", "en_pronoun")},
     "portuguese": {"label": "📕 Português", "generators": PORTUGUESE_GENERATORS,
                    "default": ("pt_plural", "pt_opposite", "pt_feminine", "pt_pronoun")},
+    "french": {"label": "🇫🇷 Francês", "generators": FRENCH_GENERATORS,
+               "default": ("fr_translation", "fr_greeting", "fr_color", "fr_pronoun")},
 }
 
 
@@ -688,6 +908,8 @@ def normalize_expanded(txt):
 def check_answer(ex, val):
     if ex["type"] == "expand":
         return normalize_expanded(val) == normalize_expanded(ex["answer"])
+    if ex.get("subject") == "french":
+        return strip_accents(val.strip().lower()) == strip_accents(ex["answer"].strip().lower())
     if ex.get("subject") in ("english", "portuguese"):
         return val.strip().lower() == ex["answer"].strip().lower()
     return val.replace(" ", "") == ex["answer"].replace(" ", "")
@@ -847,7 +1069,7 @@ def check_permanent_unlock():
 
 # ---------------- INTERFACE ----------------
 
-st.title("📚 English, Math and Português")
+st.title("📚 English, Math, Português and Français")
 
 check_permanent_unlock()
 
