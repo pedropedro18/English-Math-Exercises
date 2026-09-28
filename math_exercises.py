@@ -3,7 +3,7 @@ import json
 import os
 import streamlit as st
 
-st.set_page_config(page_title="English and Math - 4ª Classe", page_icon="📚", layout="centered")
+st.set_page_config(page_title="English, Math and Português - 4ª Classe", page_icon="📚", layout="centered")
 
 # ---------------------------------------------------------
 # CONFIG: change these to your real numbers
@@ -243,6 +243,41 @@ ARTICLES = [
     ("dog", "a"), ("cat", "a"), ("book", "a"), ("house", "a"), ("car", "a"), ("ball", "a"),
 ]
 
+# Subject pronouns: (sentence, pronoun that replaces the subject)
+EN_SUBJECT_PRONOUNS = [
+    ("Maria is my friend.", "she"),
+    ("Paulo is tall.", "he"),
+    ("The dogs are big.", "they"),
+    ("The book is on the table.", "it"),
+    ("Ana and I are at school.", "we"),
+    ("My brother and my sister are happy.", "they"),
+    ("The cat is black.", "it"),
+    ("Mr. Silva is a teacher.", "he"),
+    ("The girls are singing.", "they"),
+    ("Mrs. Costa is kind.", "she"),
+    ("Pedro and I are friends.", "we"),
+    ("The car is fast.", "it"),
+    ("My mother is at home.", "she"),
+    ("The boys are playing.", "they"),
+    ("My father is a driver.", "he"),
+]
+
+# Possessive adjectives: (sentence with _, pronoun in brackets, answer)
+EN_POSSESSIVES = [
+    ("This is _ book. (I)", "my"),
+    ("She loves _ mother. (she)", "her"),
+    ("They love _ school. (they)", "their"),
+    ("We like _ teacher. (we)", "our"),
+    ("He has _ bag. (he)", "his"),
+    ("You have _ pencil. (you)", "your"),
+    ("The dog wags _ tail. (it)", "its"),
+    ("I love _ family. (I)", "my"),
+    ("They wash _ hands. (they)", "their"),
+    ("She opens _ notebook. (she)", "her"),
+    ("We clean _ classroom. (we)", "our"),
+    ("He plays with _ friends. (he)", "his"),
+]
+
 
 def gen_translation(dif, used):
     for _ in range(30):
@@ -371,6 +406,30 @@ def gen_article(dif, used):
     return None
 
 
+def gen_en_pronoun(dif, used):
+    for _ in range(30):
+        sentence, answer = random.choice(EN_SUBJECT_PRONOUNS)
+        if ("en_pronoun", sentence) in used:
+            continue
+        used.add(("en_pronoun", sentence))
+        return {"type": "en_pronoun", "subject": "english",
+                "text": f'Write the pronoun (I, you, he, she, it, we, they) that replaces the subject: "{sentence}"',
+                "answer": answer}
+    return None
+
+
+def gen_en_possessive(dif, used):
+    for _ in range(30):
+        sentence, answer = random.choice(EN_POSSESSIVES)
+        if ("en_possessive", sentence) in used:
+            continue
+        used.add(("en_possessive", sentence))
+        return {"type": "en_possessive", "subject": "english",
+                "text": f'Fill in the blank with my/your/his/her/its/our/their: "{sentence}"',
+                "answer": answer}
+    return None
+
+
 ENGLISH_GENERATORS = {
     "translation": ("Vocabulary translation", gen_translation),
     "opposite": ("Opposites", gen_opposite),
@@ -381,6 +440,218 @@ ENGLISH_GENERATORS = {
     "number_word": ("Numbers in words", gen_number_word),
     "days": ("Days of the week", gen_days),
     "article": ("Articles (a / an)", gen_article),
+    "en_pronoun": ("Pronouns (I, you, he, she...)", gen_en_pronoun),
+    "en_possessive": ("Possessives (my, your, his...)", gen_en_possessive),
+}
+
+
+# =========================================================
+# PORTUGUESE EXERCISE GENERATORS (4ª Classe)
+# =========================================================
+
+PT_PLURALS = [
+    ("casa", "casas"), ("livro", "livros"), ("animal", "animais"), ("papel", "papéis"),
+    ("pão", "pães"), ("mão", "mãos"), ("flor", "flores"), ("luz", "luzes"),
+    ("lápis", "lápis"), ("mês", "meses"), ("cidadão", "cidadãos"), ("jornal", "jornais"),
+    ("limão", "limões"), ("nação", "nações"), ("aluno", "alunos"), ("mulher", "mulheres"),
+    ("canção", "canções"), ("hotel", "hotéis"), ("país", "países"), ("avião", "aviões"),
+]
+
+PT_OPPOSITES = [
+    ("grande", "pequeno"), ("alto", "baixo"), ("feliz", "triste"), ("cheio", "vazio"),
+    ("rápido", "lento"), ("quente", "frio"), ("novo", "velho"), ("dia", "noite"),
+    ("limpo", "sujo"), ("forte", "fraco"), ("longe", "perto"), ("claro", "escuro"),
+    ("doce", "amargo"), ("gordo", "magro"), ("bonito", "feio"), ("aberto", "fechado"),
+    ("subir", "descer"), ("entrar", "sair"), ("chegar", "partir"), ("rico", "pobre"),
+]
+
+PT_FEMININE = [
+    ("menino", "menina"), ("professor", "professora"), ("gato", "gata"), ("aluno", "aluna"),
+    ("rei", "rainha"), ("ator", "atriz"), ("galo", "galinha"), ("homem", "mulher"),
+    ("pai", "mãe"), ("avô", "avó"), ("irmão", "irmã"), ("tio", "tia"),
+    ("cão", "cadela"), ("amigo", "amiga"), ("filho", "filha"), ("vizinho", "vizinha"),
+    ("cantor", "cantora"), ("padrinho", "madrinha"),
+]
+
+PT_SYLLABLES = [
+    ("sol", 1), ("casa", 2), ("bola", 2), ("livro", 2), ("janela", 3), ("escola", 3),
+    ("cadeira", 3), ("borboleta", 4), ("computador", 4), ("elefante", 4),
+    ("mesa", 2), ("caderno", 3), ("banana", 3), ("sapato", 3), ("professora", 4),
+    ("pão", 1), ("amigo", 3), ("telefone", 4),
+]
+
+# Personal pronouns: replace the subject
+PT_PRONOUNS = [
+    ("O João corre.", "ele"),
+    ("A Ana canta.", "ela"),
+    ("Os meninos jogam à bola.", "eles"),
+    ("As meninas brincam.", "elas"),
+    ("A Maria e a Rita estudam.", "elas"),
+    ("O Pedro e o Paulo trabalham.", "eles"),
+    ("O Pedro e eu brincamos.", "nós"),
+    ("A minha mãe cozinha.", "ela"),
+    ("O meu pai conduz.", "ele"),
+    ("A professora escreve.", "ela"),
+    ("Os alunos leem.", "eles"),
+    ("A Ana e eu cantamos.", "nós"),
+    ("O gato dorme.", "ele"),
+    ("As flores crescem.", "elas"),
+]
+
+# Pronouns + verb "ser": fill the missing pronoun
+PT_PRONOUN_BLANK = [
+    ("_ sou aluno.", "eu"),
+    ("_ és meu amigo.", "tu"),
+    ("_ somos irmãos.", "nós"),
+    ("_ estudo Português. (a falar de mim)", "eu"),
+    ("_ falas muito bem. (a falar contigo)", "tu"),
+    ("_ cantamos na escola. (eu e os meus colegas)", "nós"),
+]
+
+PT_VERB_SER = [
+    ("Eu _ aluno.", "sou"),
+    ("Tu _ meu amigo.", "és"),
+    ("Ele _ professor.", "é"),
+    ("Ela _ simpática.", "é"),
+    ("Nós _ irmãos.", "somos"),
+    ("Eles _ estudantes.", "são"),
+    ("Elas _ felizes.", "são"),
+    ("Eu _ Angolano.", "sou"),
+    ("Tu _ muito alto.", "és"),
+    ("Nós _ da 4ª classe.", "somos"),
+]
+
+PT_POSSESSIVES = [
+    ("Este livro é de mim. É o _ livro. (meu/teu/dele)", "meu"),
+    ("Esta casa é de ti. É a _ casa. (minha/tua/dela)", "tua"),
+    ("Esta bola é de mim. É a _ bola. (minha/tua/dela)", "minha"),
+    ("Este caderno é de ti. É o _ caderno. (meu/teu/dele)", "teu"),
+    ("Esta mala é da Ana. É a mala _. (minha/tua/dela)", "dela"),
+    ("Este carro é do Pedro. É o carro _. (meu/teu/dele)", "dele"),
+]
+
+
+def gen_pt_plural(dif, used):
+    for _ in range(30):
+        sing, plur = random.choice(PT_PLURALS)
+        if ("pt_plural", sing) in used:
+            continue
+        used.add(("pt_plural", sing))
+        return {"type": "pt_plural", "subject": "portuguese",
+                "text": f'Escreve o plural de "{sing}":', "answer": plur}
+    return None
+
+
+def gen_pt_singular(dif, used):
+    for _ in range(30):
+        sing, plur = random.choice(PT_PLURALS)
+        if ("pt_singular", plur) in used:
+            continue
+        used.add(("pt_singular", plur))
+        return {"type": "pt_singular", "subject": "portuguese",
+                "text": f'Escreve o singular de "{plur}":', "answer": sing}
+    return None
+
+
+def gen_pt_opposite(dif, used):
+    for _ in range(30):
+        a, b = random.choice(PT_OPPOSITES)
+        ask_for_b = random.choice([True, False])
+        key = ("pt_opposite", a, ask_for_b)
+        if key in used:
+            continue
+        used.add(key)
+        if ask_for_b:
+            return {"type": "pt_opposite", "subject": "portuguese",
+                    "text": f'Qual é o contrário de "{a}"?', "answer": b}
+        return {"type": "pt_opposite", "subject": "portuguese",
+                "text": f'Qual é o contrário de "{b}"?', "answer": a}
+    return None
+
+
+def gen_pt_feminine(dif, used):
+    for _ in range(30):
+        m, f = random.choice(PT_FEMININE)
+        to_f = random.choice([True, False])
+        key = ("pt_feminine", m, to_f)
+        if key in used:
+            continue
+        used.add(key)
+        if to_f:
+            return {"type": "pt_feminine", "subject": "portuguese",
+                    "text": f'Escreve o feminino de "{m}":', "answer": f}
+        return {"type": "pt_feminine", "subject": "portuguese",
+                "text": f'Escreve o masculino de "{f}":', "answer": m}
+    return None
+
+
+def gen_pt_syllables(dif, used):
+    for _ in range(30):
+        word, n = random.choice(PT_SYLLABLES)
+        if ("pt_syllables", word) in used:
+            continue
+        used.add(("pt_syllables", word))
+        return {"type": "pt_syllables", "subject": "portuguese",
+                "text": f'Quantas sílabas tem a palavra "{word}"? (responde só com o número)',
+                "answer": str(n)}
+    return None
+
+
+def gen_pt_pronoun(dif, used):
+    for _ in range(30):
+        if random.random() < 0.65:
+            sentence, answer = random.choice(PT_PRONOUNS)
+            key = ("pt_pronoun", sentence)
+            if key in used:
+                continue
+            used.add(key)
+            return {"type": "pt_pronoun", "subject": "portuguese",
+                    "text": f'Escreve o pronome pessoal (eu, tu, ele, ela, nós, eles, elas) que substitui o sujeito: "{sentence}"',
+                    "answer": answer}
+        sentence, answer = random.choice(PT_PRONOUN_BLANK)
+        key = ("pt_pronoun", sentence)
+        if key in used:
+            continue
+        used.add(key)
+        return {"type": "pt_pronoun", "subject": "portuguese",
+                "text": f'Completa com o pronome pessoal certo: "{sentence}"',
+                "answer": answer}
+    return None
+
+
+def gen_pt_possessive(dif, used):
+    for _ in range(30):
+        sentence, answer = random.choice(PT_POSSESSIVES)
+        if ("pt_possessive", sentence) in used:
+            continue
+        used.add(("pt_possessive", sentence))
+        return {"type": "pt_possessive", "subject": "portuguese",
+                "text": f'Completa com o pronome possessivo certo: "{sentence}"',
+                "answer": answer}
+    return None
+
+
+def gen_pt_verb_ser(dif, used):
+    for _ in range(30):
+        sentence, answer = random.choice(PT_VERB_SER)
+        if ("pt_verb_ser", sentence) in used:
+            continue
+        used.add(("pt_verb_ser", sentence))
+        return {"type": "pt_verb_ser", "subject": "portuguese",
+                "text": f'Completa com a forma certa do verbo SER: "{sentence}"',
+                "answer": answer}
+    return None
+
+
+PORTUGUESE_GENERATORS = {
+    "pt_plural": ("Plural das palavras", gen_pt_plural),
+    "pt_singular": ("Singular das palavras", gen_pt_singular),
+    "pt_opposite": ("Antónimos (contrários)", gen_pt_opposite),
+    "pt_feminine": ("Masculino e feminino", gen_pt_feminine),
+    "pt_syllables": ("Sílabas", gen_pt_syllables),
+    "pt_pronoun": ("Pronomes pessoais (eu, tu, ele...)", gen_pt_pronoun),
+    "pt_possessive": ("Pronomes possessivos (meu, teu...)", gen_pt_possessive),
+    "pt_verb_ser": ("Verbo SER", gen_pt_verb_ser),
 }
 
 
@@ -388,7 +659,9 @@ SUBJECTS = {
     "math": {"label": "🧮 Matemática", "generators": MATH_GENERATORS,
               "default": ("round", "expand", "mult", "add")},
     "english": {"label": "📖 Inglês", "generators": ENGLISH_GENERATORS,
-                 "default": ("translation", "opposite", "plural", "verb_to_be")},
+                 "default": ("translation", "opposite", "plural", "verb_to_be", "en_pronoun")},
+    "portuguese": {"label": "📕 Português", "generators": PORTUGUESE_GENERATORS,
+                   "default": ("pt_plural", "pt_opposite", "pt_feminine", "pt_pronoun")},
 }
 
 
@@ -415,7 +688,7 @@ def normalize_expanded(txt):
 def check_answer(ex, val):
     if ex["type"] == "expand":
         return normalize_expanded(val) == normalize_expanded(ex["answer"])
-    if ex.get("subject") == "english":
+    if ex.get("subject") in ("english", "portuguese"):
         return val.strip().lower() == ex["answer"].strip().lower()
     return val.replace(" ", "") == ex["answer"].replace(" ", "")
 
@@ -452,19 +725,19 @@ def whatsapp_link(message):
 def show_privacy_notice():
     st.info(
         """
-🔒 *Política de Privacidade e Uso*
+🔒 Política de Privacidade e Uso
 
-*Sobre o teu acesso*
-- Este código é *pessoal e intransmissível* — foi comprado por ti para uso individual.
-- *Não partilhes, vendas nem copies* o código ou o link de acesso com outras pessoas.
+Sobre o teu acesso
+- Este código é pessoal e intransmissível — foi comprado por ti para uso individual.
+- Não partilhes, vendas nem copies o código ou o link de acesso com outras pessoas.
 
-*Sobre os teus dados*
-- Guardamos apenas: o código de acesso, a data/hora de desbloqueio (para segurança) e, se definires, a tua *frase-secreta pessoal* (usada só para recuperares o acesso).
-- *Não vendemos nem partilhamos* estes dados com terceiros, nem os usamos para qualquer outro fim.
+Sobre os teus dados
+- Guardamos apenas: o código de acesso, a data/hora de desbloqueio (para segurança) e, se definires, a tua frase-secreta pessoal (usada só para recuperares o acesso).
+- Não vendemos nem partilhamos estes dados com terceiros, nem os usamos para qualquer outro fim.
 - Podes pedir ao professor, a qualquer momento, para apagar os teus dados.
 
-*Em caso de incumprimento*
-- Partilhar, vender ou copiar o código/link pode levar ao *bloqueio permanente* do acesso.
+Em caso de incumprimento
+- Partilhar, vender ou copiar o código/link pode levar ao bloqueio permanente do acesso.
         """
     )
 
@@ -574,7 +847,7 @@ def check_permanent_unlock():
 
 # ---------------- INTERFACE ----------------
 
-st.title("📚 English and Math")
+st.title("📚 English, Math and Português")
 
 check_permanent_unlock()
 
